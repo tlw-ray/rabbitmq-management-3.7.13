@@ -1,0 +1,98 @@
+<h1>用户</h1>
+<div class="section">
+  <h2>所有用户</h2>
+  <div class="hider">
+<%= filter_ui(users) %>
+  <div class="updatable">
+<% if (users.length > 0) { %>
+<table class="list">
+  <thead>
+    <tr>
+      <th><%= fmt_sort('名称', 'name') %></th>
+      <th><%= fmt_sort('标签', 'tags') %></th>
+      <th>可访问主机</th>
+      <th>具有密码</th>
+    </tr>
+  </thead>
+  <tbody>
+    <%
+       for (var i = 0; i < users.length; i++) {
+         var user = users[i];
+    %>
+       <tr<%= alt_rows(i)%>>
+         <td><%= link_user(user.name) %></td>
+         <td class="c"><%= fmt_string(user.tags) %></td>
+         <td class="c"><%= fmt_permissions(user, permissions, 'user', 'vhost',
+                           '<p class="warning">无法访问</p>') %></td>
+         <td class="c"><%= fmt_boolean(user.password_hash.length > 0) %></td>
+       </tr>
+    <% } %>
+  </tbody>
+</table>
+<% } else { %>
+    <p>... 无用户 ...</p>
+<% } %>
+    <p><span class="help" id="internal-users-only"></span></p>
+  </div>
+  </div>
+</div>
+
+<div class="section-hidden">
+  <h2>添加用户</h2>
+  <div class="hider">
+    <form action="#/users-add" method="put">
+      <table class="form">
+        <tr>
+          <th><label>用户名:</label></th>
+          <td>
+            <input type="text" name="username"/>
+            <span class="mand">*</span>
+          </td>
+        </tr>
+        <tr>
+          <th>
+            <label>
+              <select name="has-password" class="narrow controls-appearance">
+                <option value="password">密码:</option>
+                <option value="no-password">无密码</option>
+              </select>
+            </label>
+          </th>
+          <td>
+            <div id="password-div">
+              <input type="password" name="password" />
+              <span class="mand">*</span><br/>
+              <input type="password" name="password_confirm" />
+              <span class="mand">*</span>
+              (确认)
+            </div>
+            <div id="no-password-div" style="display: none;">
+              用户无法使用密码登录.
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <th><label>标签:</label></th>
+          <td>
+            <input type="text" name="tags" id="tags" />
+            <span class="help" id="user-tags"/>
+            <table class="argument-links">
+              <tr>
+                <td>设定</td>
+                <td>
+                  <span class="tag-link" tag="administrator">管理员</span> |
+                  <span class="tag-link" tag="monitoring">监视</span> |
+                  <span class="tag-link" tag="policymaker">策略制订</span><br />
+                  <span class="tag-link" tag="management">管理</span> |
+                  <span class="tag-link" tag="impersonator">模仿</span> |
+                  <span class="tag-link" tag="">无</span>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+      <input type="submit" value="添加用户"/>
+    </form>
+  </div>
+</div>

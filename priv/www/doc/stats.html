@@ -1,0 +1,882 @@
+<html>
+  <head>
+    <title>RabbitMQ Management HTTP Stats</title>
+    <meta content="text/html; charset=utf-8" http-equiv="content-type" />
+    <style>
+      body { font: 12px Verdana,sans-serif; color: #444; padding: 8px 35px; }
+      td, th { font: 12px Verdana,sans-serif; color: #444; }
+      h1 { font-size: 2em; }
+      h2 { font-size: 1.5em; }
+      td.path { font-family: monospace; }
+      th { font-size: 1em; font-weight: bold; }
+      table { border-collapse: collapse; }
+      table th, table td { vertical-align: top; border: 1px solid #bbb; padding: 5px; }
+      code { background: #ffa; }
+      pre { background: black; color: #0f0; padding: 10px; word-wrap: break-word;}
+      table pre { background: #ffa; color: black; }
+    </style>
+  </head>
+  <body>
+    <h1>RabbitMQ 管理 HTTP 状态</h1>
+    <h2>介绍</h2>
+    <p>
+      可以向HTTP API发出的大多数GET请求都会返回具有大量键的JSON对象。
+      虽然其中一些键表示在PUT请求或AMQP命令（例如队列持久性或参数）中设置的内容，
+      但大多数键表示与所相关的对象有关的统计信息。 此页面尝试记录它们。
+    </p>
+
+    <p>
+      它应与<code> rabbitmqctl </code>的手册页一起阅读（如果在Unix / Linux上，请参阅安装指南
+      或<a href="http://www.rabbitmq.com/man/rabbitmqctl.1.man.html">RabbitMQ网站</a>获取最新版本）。
+      任何可以通过<code> rabbitmqctl list_ <i>something</i> </code>形式的命令返回的字段也将在HTTP API的等效部分中返回，
+      因此这里没有记录所有这些键。 但是，HTTP API还会添加许多额外字段，这些字段在<code>rabbitmqctl</code>中不可用。
+    </p>
+
+    <h2>_details objects</h2>
+    <p>
+      许多字段表示某种计数：队列长度，确认消息，接收字节等。 HTTP API返回的此类绝对计数通常具有相应的
+      <code>_details</code>对象，该对象提供有关此计数如何更改的信息。 例如，从队列中：
+    </p>
+<pre>    "messages": 123619,
+    "messages_details": {
+      "avg": 41206.333333333336,
+      "avg_rate": 1030.1583333333333,
+      "rate": 24723.8,
+      "samples": [
+        {
+          "sample": 123619,
+          "timestamp": 1400680560000
+        },
+        {
+          "sample": 0,
+          "timestamp": 1400680500000
+        },
+        {
+          "sample": 0,
+          "timestamp": 1400680440000
+        }
+      ]
+    }</pre>
+
+    <p>
+      这里有一个<code> messages </code> 数量（队列中的总消息数），以及一些额外的数据：
+    </p>
+
+    <table>
+      <tr>
+        <td><code>avg</code></td>
+        <td>
+          请求时间段的平均值（见下文）。
+        </td>
+      </tr>
+      <tr>
+        <td><code>avg_rate</code></td>
+        <td>
+          请求的时间段的平均费率。
+        </td>
+      </tr>
+      <tr>
+        <td><code>rate</code></td>
+        <td>
+          在最近的采样间隔内，计数每秒的变化量。
+        </td>
+      </tr>
+      <tr>
+        <td><code>samples</code></td>
+        <td>
+          快照显示值在请求的时间段内的变化情况。
+        </td>
+      </tr>
+    </table>
+
+    <p>
+      仅当您通过向URL附加查询参数请求特定时间段时，才会显示<code> avg </code>，
+      <code> avg_rate </code>和<code> samples </code>。 为此，需要为所需的样本设置年龄和增量。
+      返回范围的结尾将始终对应于当前。
+    </p>
+
+    <p>
+      不同类型的数据采用不同的查询参数来返回样本，如下表所示。
+      如果您请求的资源可以生成多种类型的样本，则可以指定多个参数集（例如，队列可以返回消息速率和队列长度）。
+    </p>
+
+    <table>
+      <tr>
+        <td>消息发送和接收</td>
+        <td><code>msg_rates_age</code> / <code>msg_rates_incr</code></td>
+      </tr>
+      <tr>
+        <td>字节发送和接收</td>
+        <td><code>data_rates_age</code> / <code>data_rates_incr</code>
+        </td>
+      </tr>
+      <tr>
+        <td>队列长度</td>
+        <td><code>lengths_age</code> / <code>lengths_incr</code></td>
+      </tr>
+      <tr>
+        <td>节点统计 (例如文件描述，磁盘空闲空间)</td>
+        <td><code>node_stats_age</code> / <code>node_stats_incr</code></td>
+      </tr>
+    </table>
+
+    <p>
+      例如,
+      追加 <code>?lengths_age=3600&lengths_incr=60</code> 会返回最后一小时数据在队列的长度，
+      以及对于每一分钟的采样。
+    </p>
+
+    <h2>message_stats objects</h2>
+    <p>
+      许多对象（包括队列，交换和通道）将返回通过它们的消息计数。 它们包含在
+      <code> message_stats </code>对象中（对于每个计数，它将包含
+      <code> _details </code>对象，如上所述）。
+    </p>
+    <p>
+      这些可以包含：
+    </p>
+
+    <table>
+      <tr>
+        <td><code>publish</code></td>
+        <td>
+          发布的消息数量。
+        </td>
+      </tr>
+      <tr>
+        <td><code>publish_in</code></td>
+        <td>
+          在交换机中"发布"的消息计数，即未考虑路由。
+        </td>
+      </tr>
+      <tr>
+        <td><code>publish_out</code></td>
+        <td>
+          从交换机"发布"出来的消息计数，即考虑路由。
+        </td>
+      </tr>
+      <tr>
+        <td><code>confirm</code></td>
+        <td>
+          确认消息的数量。
+        </td>
+      </tr>
+      <tr>
+        <td><code>deliver</code></td>
+        <td>
+          以确认模式向消费者传递的消息计数。
+        </td>
+      </tr>
+      <tr>
+        <td><code>deliver_no_ack</code></td>
+        <td>
+          以无确认模式向消费者传递的消息计数。
+        </td>
+      </tr>
+      <tr>
+        <td><code>get</code></td>
+        <td>
+          响应于basic.get以确认模式传递的消息计数。
+        </td>
+      </tr>
+      <tr>
+        <td><code>get_no_ack</code></td>
+        <td>
+          响应于basic.get以无响应模式传递的消息计数。
+        </td>
+      </tr>
+      <tr>
+        <td><code>deliver_get</code></td>
+        <td>
+          以上四种情况的总和。
+        </td>
+      </tr>
+      <tr>
+        <td><code>redeliver</code></td>
+        <td>
+          <code> deliver_get </code>中已设置redelivered标志的消息子集计数。
+        </td>
+      </tr>
+      <tr>
+        <td><code>return_unroutable</code></td>
+        <td>
+          作为unroutable返回给发布者的消息计数。
+        </td>
+      </tr>
+    </table>
+
+    <p>
+      仅显示已发生某些活动的字段。
+    </p>
+
+    <h2>详细的消息统计对象</h2>
+    <p>
+      此外，队列，交换和通道可以返回其每个邻居（即链中的相邻对象：通道 - >交换 - >队列 - >通道）
+      的消息统计信息的细分。 只有当<code> rates_mode </code>配置项从其默认的
+      <code> basic </code>切换到<code>详细</code>时，才会发生这种情况。
+    </p>
+    <p>
+      由于这可能构成大量数据，因此仅在查询单个通道，队列或交换而不是列表时返回。
+      另请注意，默认样本保留策略意味着这些详细消息统计信息不会保留历史数据超过几秒钟。
+    </p>
+    <p>
+      详细消息统计对象具有不同的名称，具体取决于它们的位置（下面记录）。
+      每组详细统计数据包含一个具有两个字段的对象列表，一个标识合作伙伴对象，
+      另一个<code> stats </code>，它是如上所述的message_stats对象。
+    </p>
+    <p>
+      例如来自一个队列:
+    </p>
+    <pre>  "incoming": [
+    {
+      "stats": {
+        "publish": 352593,
+        "publish_details": {
+          "rate": 100.2
+        }
+      },
+      "exchange": {
+        "name": "my-exchange",
+        "vhost": "/"
+      }
+    }
+    {
+      "stats": {
+        "publish": 543784,
+        "publish_details": {
+          "rate": 54.6
+        }
+      },
+      "exchange": {
+        "name": "amq.topic",
+        "vhost": "/"
+      }
+    }
+  ],</pre>
+
+    <p>
+      此队列当前正在从两个交换机接收消息：
+      "my-exchange"为100.2 msg/s，"amq.topic"为54.6 msg/s。
+    </p>
+
+    <h2>/api/overview</h2>
+
+    <p>
+      包含如下字段:
+    </p>
+
+    <table>
+      <tr>
+        <td><code>cluster_name</code></td>
+        <td>
+          整个集群的名称, 如下 <code>rabbitmqctl
+          set_cluster_name</code>.
+        </td>
+      </tr>
+      <tr>
+        <td><code>contexts</code></td>
+        <td>
+          集群中的Web应用程序上下文列表。
+        </td>
+      </tr>
+      <tr>
+        <td><code>erlang_full_version</code></td>
+        <td>
+          对于连接到的节点，具有关于Erlang VM及其编译方式的扩展细节的字符串。
+        </td>
+      </tr>
+      <tr>
+        <td><code>erlang_version</code></td>
+        <td>
+          连接到节点的Erlang版本的字符串。 由于集群应该都运行相同的版本，因此可以将其视为表示集群。
+        </td>
+      </tr>
+      <tr>
+        <td><code>exchange_types</code></td>
+        <td>
+          可用的所有交换类型的列表。
+        </td>
+      </tr>
+      <tr>
+        <td><code>listeners</code></td>
+        <td>
+          集群内对于所有节点的所有 (Non-HTTP) 网络监听. (见 <code>contexts</code>
+          在 <code>/api/nodes</code> 关于 HTTP).
+        </td>
+      </tr>
+      <tr>
+        <td><code>management_version</code></td>
+        <td>
+          管理插件的版本。
+        </td>
+      </tr>
+      <tr>
+        <td><code>message_stats</code></td>
+        <td>
+          用户可以看到的所有内容的message_stats对象 - 对于所有虚拟机，
+          无论是<code> monitoring </code>和<code> administrator </code>用户的权限，
+          还是用户可以访问的所有虚拟机用户。
+        </td>
+      </tr>
+      <tr>
+        <td><code>node</code></td>
+        <td>
+          运行此管理插件实例的群集节点的名称。
+        </td>
+      </tr>
+      <tr>
+        <td><code>object_totals</code></td>
+        <td>
+          包含所有连接，通道，交换，队列和使用者的全局计数的对象，遵循与<code> message_stats </code>相同的可见性规则。
+        </td>
+      </tr>
+      <tr>
+        <td><code>queue_totals</code></td>
+        <td>
+          包含所有队列的<code>messages</code>，<code> messages_ready </code>和
+          <code> messages_unacknowledged </code>字段之和的对象，遵循与
+          <code> message_stats</code>相同的可见性规则。
+        </td>
+      </tr>
+      <tr>
+        <td><code>rabbitmq_version</code></td>
+        <td>
+          处理此请求的节点上的RabbitMQ版本。
+        </td>
+      </tr>
+      <tr>
+        <td><code>rates_mode</code></td>
+        <td>
+          'none', 'basic' 或 'detailed'.
+        </td>
+      </tr>
+      <tr>
+        <td><code>statistics_db_event_queue</code></td>
+        <td>
+          尚未由数据库处理的未完成统计信息事件的数量。
+        </td>
+      </tr>
+      <tr>
+        <td><code>statistics_db_node</code></td>
+        <td>
+          托管管理统计数据库的集群节点的名称。
+        </td>
+      </tr>
+    </table>
+
+    <h2>/api/nodes</h2>
+
+    <p>
+      包含以下字段：
+    </p>
+
+    <table>
+      <tr>
+        <td><code>applications</code></td>
+        <td>
+          在节点上运行的所有Erlang应用程序的列表。
+        </td>
+      </tr>
+      <tr>
+        <td><code>auth_mechanisms</code></td>
+        <td>
+          节点上安装的所有SASL身份验证机制的列表。
+        </td>
+      </tr>
+      <tr>
+        <td><code>cluster_links</code></td>
+        <td>
+          群集中其他节点的列表。 对于每个节点，都有用于连接它的TCP连接的详细信息以及已传输数据的统计信息。
+        </td>
+      </tr>
+      <tr>
+        <td><code>config_files</code></td>
+        <td>
+          节点读取的配置文件列表。
+        </td>
+      </tr>
+      <tr>
+        <td><code>contexts</code></td>
+        <td>
+          节点上所有HTTP侦听器的列表。
+        </td>
+      </tr>
+      <tr>
+        <td><code>db_dir</code></td>
+        <td>
+          节点使用的持久存储的位置。
+        </td>
+      </tr>
+      <tr>
+        <td><code>disk_free</code></td>
+        <td>
+          磁盘空间（以字节为单位）
+        </td>
+      </tr>
+      <tr>
+        <td><code>disk_free_alarm</code></td>
+        <td>
+          磁盘警报是否已关闭。
+        </td>
+      </tr>
+      <tr>
+        <td><code>disk_free_limit</code></td>
+        <td>
+          磁盘警报将关闭的点。
+        </td>
+      </tr>
+      <tr>
+        <td><code>enabled_plugins</code></td>
+        <td>
+          显式启用和运行的插件列表。
+        </td>
+      </tr>
+      <tr>
+        <td><code>exchange_types</code></td>
+        <td>
+          节点上可用的Exchange类型。
+        </td>
+      </tr>
+      <tr>
+        <td><code>fd_total</code></td>
+        <td>
+          文件描述符可用。
+        </td>
+      </tr>
+      <tr>
+        <td><code>fd_used</code></td>
+        <td>
+          使用的文件描述符。
+        </td>
+      </tr>
+      <tr>
+        <td><code>io_read_avg_time</code></td>
+        <td>
+          上次统计间隔中每个磁盘读取操作的平均挂起时间（毫秒）。
+        </td>
+      </tr>
+      <tr>
+        <td><code>io_read_bytes</code></td>
+        <td>
+          持久化从磁盘读取的总字节数。
+        </td>
+      </tr>
+      <tr>
+        <td><code>io_read_count</code></td>
+        <td>
+          持久化的读取操作总数。
+        </td>
+      </tr>
+      <tr>
+        <td><code>io_reopen_count</code></td>
+        <td>
+          持久性在队列之间回收文件句柄所需的总次数。
+          在一个理想的世界中，这个数字将为零; 如果数量很大，
+          可以通过增加RabbitMQ可用的文件句柄数来提高性能。
+        </td>
+      </tr>
+      <tr>
+        <td><code>io_seek_avg_time</code></td>
+        <td>
+          上次统计间隔中每次搜索操作的平均挂起时间（毫秒）。
+        </td>
+      </tr>
+      </tr>
+      <tr>
+        <td><code>io_seek_count</code></td>
+        <td>
+          persister的搜索操作总数。
+        </td>
+      </tr>
+      <tr>
+        <td><code>io_sync_avg_time</code></td>
+        <td>
+          上次统计间隔中每个fsync（）操作的平均挂起时间（毫秒）。
+        </td>
+      </tr>
+      </tr>
+      <tr>
+        <td><code>io_sync_count</code></td>
+        <td>
+          上次统计间隔中每个fsync（）操作的平均挂起时间（毫秒）。
+        </td>
+      </tr>
+      <tr>
+        <td><code>io_write_avg_time</code></td>
+        <td>
+          上次统计间隔中每个磁盘写入操作的平均挂起时间（毫秒）。
+        </td>
+      </tr>
+      <tr>
+        <td><code>io_write_bytes</code></td>
+        <td>
+          持久化写入磁盘的总字节数。
+        </td>
+      </tr>
+      <tr>
+        <td><code>io_write_count</code></td>
+        <td>
+          持久化的写操作总数。
+        </td>
+      </tr>
+      <tr>
+        <td><code>log_files</code></td>
+        <td>
+          节点使用的日志文件列表。 如果节点还向stdout发送消息，
+          则列表中也会报告"<code>&lt;stdout&gt;</code>"。
+        </td>
+      </tr>
+      <tr>
+        <td><code>mem_used</code></td>
+        <td>
+          内存使用字节数。
+        </td>
+      </tr>
+      <tr>
+        <td><code>mem_alarm</code></td>
+        <td>
+          内存报警是否已经消除。
+        </td>
+      </tr>
+      <tr>
+        <td><code>mem_limit</code></td>
+        <td>
+          内存报警消除阈值。
+        </td>
+      </tr>
+      <tr>
+        <td><code>mnesia_disk_tx_count</code></td>
+        <td>
+          已执行的需要写入磁盘的Mnesia事务数。 （例如，创建持久队列）。
+          仅包括源自此节点的事务。
+        </td>
+      </tr>
+      <tr>
+        <td><code>mnesia_ram_tx_count</code></td>
+        <td>
+          已执行的不需要写入磁盘的Mnesia事务数。 （例如，创建一个临时队列）。
+          仅包括源自此节点的事务。
+        </td>
+      </tr>
+      <tr>
+        <td><code>msg_store_read_count</code></td>
+        <td>
+          已从消息存储库中读取的消息数。
+        </td>
+      </tr>
+      <tr>
+        <td><code>msg_store_write_count</code></td>
+        <td>
+          已写入消息存储库的消息数。
+        </td>
+      </tr>
+      <tr>
+        <td><code>name</code></td>
+        <td>
+          节点名称。
+        </td>
+      </tr>
+      <tr>
+        <td><code>net_ticktime</code></td>
+        <td>
+          节点当前内核net_ticktime设定.
+        </td>
+      </tr>
+      <tr>
+        <td><code>os_pid</code></td>
+        <td>
+          正在运行此节点的操作系统的进程标识符。
+        </td>
+      </tr>
+      <tr>
+        <td><code>partitions</code></td>
+        <td>
+          此节点正在查看的网络分区列表。
+        </td>
+      </tr>
+      <tr>
+        <td><code>proc_total</code></td>
+        <td>
+          Erlang最大进程数。
+        </td>
+      </tr>
+      <tr>
+        <td><code>proc_used</code></td>
+        <td>
+          使用中最大Erlang进程数。
+        </td>
+      </tr>
+      <tr>
+        <td><code>processors</code></td>
+        <td>
+          Erlang检测到并可使用的核心数。
+        </td>
+      </tr>
+      <tr>
+        <td><code>queue_index_journal_write_count</code></td>
+        <td>
+          写入队列索引日志的记录数。 每条记录表示一条消息，该消息被发布到队列，
+          从队列传递，并在队列中被确认。
+        </td>
+      </tr>
+      <tr>
+        <td><code>queue_index_read_count</code></td>
+        <td>
+          从队列索引读取的记录数。
+        </td>
+      </tr>
+      <tr>
+        <td><code>queue_index_write_count</code></td>
+        <td>
+          写入队列索引的记录数。
+        </td>
+      </tr>
+      <tr>
+        <td><code>rates_mode</code></td>
+        <td>
+          'none', 'basic' 或 'detailed'.
+        </td>
+      </tr>
+      <tr>
+        <td><code>run_queue</code></td>
+        <td>
+          等待运行的平均Erlang进程数。
+        </td>
+      </tr>
+      <tr>
+        <td><code>running</code></td>
+        <td>
+          此节点是否已启动的布尔值。 如果该值为false，大多数其他统计数据将会丢失。
+        </td>
+      </tr>
+      <tr>
+        <td><code>sasl_log_file</code></td>
+        <td>
+          <a href="http://www.erlang.org/doc/man/sasl_app.html">sasl</a>日志文件位置.
+        </td>
+      </tr>
+      <tr>
+        <td><code>sockets_total</code></td>
+        <td>
+          可用的sockets的文件描述符。
+        </td>
+      </tr>
+      <tr>
+        <td><code>sockets_used</code></td>
+        <td>
+          用作sockets的文件描述符。
+        </td>
+      </tr>
+      <tr>
+        <td><code>type</code></td>
+        <td>
+          'disc' 或 'ram'.
+        </td>
+      </tr>
+      <tr>
+        <td><code>uptime</code></td>
+        <td>
+          自Erlang VM启动以来的时间，以毫秒为单位。
+        </td>
+      </tr>
+    </table>
+
+    <h2>/api/nodes/(name)</h2>
+
+    <p>
+      以上所有，加上：
+    </p>
+
+    <table>
+      <tr>
+        <td><code>memory</code></td>
+        <td>
+          详细的内存使用统计。 仅在<code>?memory=true</code>附加到URL时才会出现。
+        </td>
+      </tr>
+      <tr>
+        <td><code>binary</code></td>
+        <td>
+          二进制内存的所有者的详细细分。 仅在<code>?binary=true</code>附加到URL时才会出现。
+          请注意，如果系统中有许多小二进制文件，这可能是一个高成本的查询。
+        </td>
+      </tr>
+    </table>
+
+    <h2>/api/connections</h2>
+    <h2>/api/connections/(name)</h2>
+
+    <p>
+      请参阅<code>rabbitmqctl
+      list_connections</code>的文档。
+      没有其他字段，但<code>pid</code>被<code>node</code>替换。
+    </p>
+
+    <p>
+      另请注意，虽然非AMQP连接将出现在此列表中（与
+      <code>rabbitmqctl list_connections</code>不同），
+      但它们将省略许多连接级统计信息。
+    </p>
+
+    <h2>/api/connections/(name)/channels</h2>
+    <h2>/api/channels</h2>
+
+    <p>
+      请参阅<code>rabbitmqctl list_channels</code>的文档，
+      <code> pid </code>替换为<code> node </code>：
+    </p>
+
+    <table>
+      <tr>
+        <td><code>connection_details</code></td>
+        <td>
+          关于拥有连接的一些基本细节。
+        </td>
+      </tr>
+      <tr>
+        <td><code>message_stats</code></td>
+        <td>
+          请参阅上面的message_stats部分。
+        </td>
+      </tr>
+    </table>
+
+    <h2>/api/channels/(name)</h2>
+
+    <p>
+      以上所有，加上
+    </p>
+
+    <table>
+      <tr>
+        <td><code>publishes</code></td>
+        <td>
+          发布到'交换'的所的详细消息统计（参见上文）。
+        </td>
+      </tr>
+      <tr>
+        <td><code>deliveries</code></td>
+        <td>
+          从队列中交付的详细消息统计信息。
+        </td>
+      </tr>
+      <tr>
+        <td><code>consumer_details</code></td>
+        <td>
+          此通道上的消费者列表，以及消息的细节。
+        </td>
+      </tr>
+    </table>
+
+    <h2>/api/exchanges</h2>
+    <h2>/api/exchanges/(vhost)</h2>
+
+    <p>
+      更多信息请查阅 <code>rabbitmqctl list_exchanges</code>的文档:
+    </p>
+
+    <table>
+      <tr>
+        <td><code>message_stats</code></td>
+        <td>
+          请参阅上面的message_stats部分。
+        </td>
+      </tr>
+    </table>
+
+    <h2>/api/exchanges/(vhost)/(name)</h2>
+
+    <p>
+      以上所有，加上：
+    </p>
+
+    <table>
+      <tr>
+        <td><code>incoming</code></td>
+        <td>
+          详细的消息统计（参见上文），用于从'通道'发布到此'交换'。
+        </td>
+      </tr>
+      <tr>
+        <td><code>outgoing</code></td>
+        <td>
+          从此'交换'发布到'队列'的详细消息统计信息。
+        </td>
+      </tr>
+    </table>
+
+    <h2>/api/queues</h2>
+    <h2>/api/queues/(vhost)</h2>
+
+    <p>
+      请参阅<code> rabbitmqctl list_queues </code>的文档，其中<code> pid </code>
+      的所有引用都被<code> node </code>替换：
+    </p>
+
+    <table>
+      <tr>
+        <td><code>message_stats</code></td>
+        <td>
+          请参阅上面的message_stats部分。
+        </td>
+      </tr>
+    </table>
+
+    <h2>/api/queues/(vhost)/(name)</h2>
+
+    <p>
+      以上所有，加上：
+    </p>
+
+    <table>
+      <tr>
+        <td><code>incoming</code></td>
+        <td>
+          用于从交换机发布到此队列的详细消息统计信息（请参阅上面的部分）。
+        </td>
+      </tr>
+      <tr>
+        <td><code>deliveries</code></td>
+        <td>
+          从此'队列'到'通道'的详细消息统计信息。
+        </td>
+      </tr>
+      <tr>
+        <td><code>consumer_details</code></td>
+        <td>
+          此'通道'上的'消费者'列表，每个'消息'都有一些细节。
+        </td>
+      </tr>
+    </table>
+
+    <h2>/api/vhosts/</h2>
+    <h2>/api/vhosts/(name)</h2>
+
+    <p>
+      来自<code> rabbitmqctl list_vhosts </code>的所有字段
+      （即<code> name </code>和<code> tracing </code>）加上：
+    </p>
+
+    <table>
+      <tr>
+        <td><code>message_stats</code></td>
+        <td>
+          此'虚拟机'的全局message_stats。 请注意，即使对于没有
+          <code> monitoring </code>标记的用户，也会显示此虚拟机 <b>中其他用户的活动</b>。
+        </td>
+      </tr>
+      <tr>
+        <td><code>messages</code> <code>messages_ready</code> <code>messages_acknowledged</code></td>
+        <td>
+          '虚拟机'中所有'队列'的这些字段的总和。
+        </td>
+      </tr>
+      <tr>
+        <td><code>recv_oct</code> <code>send_oct</code></td>
+        <td>
+          所有与'虚拟机'的连接的这些字段的总和。
+        </td>
+      </tr>
+    </table>
+   </body>
+</html>

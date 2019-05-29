@@ -1,0 +1,25 @@
+<% if (node.running) { %>
+<table class="list">
+    <tr>
+      <th>名称</th>
+      <th>描述</th>
+<% if (show_enabled) { %>
+      <th>可用</th>
+<% } %>
+    </tr>
+    <%
+      for (var i = 0; i < list.length; i++) {
+        var item = list[i];
+    %>
+       <tr<%= alt_rows(i)%>>
+         <td><%= fmt_string(item.name) %></td>
+         <td><%= fmt_string(item.description) %></td>
+<% if (show_enabled) { %>
+         <td class="c"><%= fmt_boolean(item.enabled) %></td>
+<% } %>
+       </tr>
+    <% } %>
+</table>
+<% } else {%>
+<p>...节点未运行...</p>
+<% } %>

@@ -1,0 +1,63 @@
+<div class="section-hidden">
+  <h2>发布消息</h2>
+  <div class="hider">
+    <form action="#/exchanges/publish" method="post">
+<% if (mode == 'queue') { %>
+      <input type="hidden" name="vhost" value="<%= fmt_string(queue.vhost) %>"/>
+      <input type="hidden" name="name" value="amq.default"/>
+<% } else { %>
+      <input type="hidden" name="vhost" value="<%= fmt_string(exchange.vhost) %>"/>
+      <input type="hidden" name="name" value="<%= fmt_exchange_url(exchange.name) %>"/>
+<% } %>
+      <input type="hidden" name="properties" value=""/>
+      <table class="form">
+<% if (mode == 'queue') { %>
+        <tr>
+          <td colspan="2"><input type="hidden" name="routing_key" value="<%= fmt_string(queue.name) %>"/> 消息将使用路由密钥发布到默认交换 <strong><%= fmt_string(queue.name) %></strong>, 将其路由到此队列.</td>
+        </tr>
+<% } else { %>
+        <tr>
+          <th><label>路由键:</label></th>
+          <td><input type="text" name="routing_key" value=""/></td>
+        </tr>
+<% } %>
+        <tr>
+          <th><label>交付方式:</label></th>
+          <td>
+            <select name="delivery_mode">
+              <option value="1">1 - 非持久化</option>
+              <option value="2">2 - 持久化</option>
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <th>
+            <label>
+              头:
+              <span class="help" id="message-publish-headers"></span>
+            </label>
+          </th>
+          <td>
+            <div class="multifield" id="headers"></div>
+          </td>
+        </tr>
+        <tr>
+          <th>
+            <label>
+              属性:
+              <span class="help" id="message-publish-properties"></span>
+            </label>
+          </th>
+          <td>
+            <div class="multifield string-only" id="props"></div>
+          </td>
+        </tr>
+        <tr>
+          <th><label>载荷:</label></th>
+          <td><textarea name="payload"></textarea></td>
+        </tr>
+      </table>
+      <input type="submit" value="发布消息" />
+    </form>
+  </div>
+</div>

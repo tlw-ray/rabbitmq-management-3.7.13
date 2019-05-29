@@ -1,0 +1,266 @@
+<h1>策略</h1>
+<div class="section">
+  <h2>用户策略</h2>
+  <div class="hider">
+<%= filter_ui(policies) %>
+  <div class="updatable">
+<% if (policies.length > 0) { %>
+<table class="list">
+ <thead>
+  <tr>
+<% if (vhosts_interesting) { %>
+    <th>虚拟机</th>
+<% } %>
+    <th>名称</th>
+    <th>模式</th>
+    <th>应用于</th>
+    <th>定义</th>
+    <th>优先</th>
+  </tr>
+ </thead>
+ <tbody>
+<%
+ for (var i = 0; i < policies.length; i++) {
+    var policy = policies[i];
+%>
+   <tr<%= alt_rows(i)%>>
+<% if (vhosts_interesting) { %>
+     <td><%= fmt_string(policy.vhost) %></td>
+<% } %>
+<% if (is_user_policymaker) { %>
+     <td><%= link_policy(policy.vhost, policy.name) %></td>
+<% } else { %>
+     <td><%= fmt_string(policy.name) %></td>
+<% } %>
+     <td><%= fmt_string(policy.pattern) %></td>
+     <td><%= fmt_string(policy['apply-to']) %></td>
+     <td><%= fmt_table_short(policy.definition) %></td>
+     <td><%= fmt_string(policy.priority) %></td>
+   </tr>
+<% } %>
+ </tbody>
+</table>
+<% } else { %>
+  <p>... 无策略 ...</p>
+<% } %>
+  </div>
+  </div>
+</div>
+
+<% if (is_user_policymaker && vhosts.length > 0) { %>
+
+<div class="section-hidden">
+  <h2>添加/更新 策略</h2>
+  <div class="hider">
+    <form action="#/policies" method="put">
+      <table class="form">
+<% if (vhosts_interesting) { %>
+        <tr>
+          <th><label>虚拟机:</label></th>
+          <td>
+            <select name="vhost">
+              <% for (var i = 0; i < vhosts.length; i++) { %>
+              <option value="<%= fmt_string(vhosts[i].name) %>" <%= (vhosts[i].name === current_vhost) ? 'selected="selected"' : '' %>><%= fmt_string(vhosts[i].name) %></option>
+              <% } %>
+            </select>
+          </td>
+        </tr>
+<% } else { %>
+        <tr><td><input type="hidden" name="vhost" value="<%= fmt_string(vhosts[0].name) %>"/></td></tr>
+<% } %>
+        <tr>
+          <th><label>名称:</label></th>
+          <td><input type="text" name="name"/><span class="mand">*</span></td>
+        </tr>
+        <tr>
+          <th><label>模式:</label></th>
+          <td><input type="text" name="pattern"/><span class="mand">*</span></td>
+        </tr>
+        <tr>
+          <th><label>应用于:</label></th>
+          <td>
+            <select name="apply-to">
+              <option value="all">交换与队列</option>
+              <option value="exchanges">交换</option>
+              <option value="queues">队列</option>
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <th><label>优先:</label></th>
+          <td><input type="text" name="priority"/></td>
+        </tr>
+        <tr>
+          <th><label>定义:</label></th>
+          <td>
+            <div class="multifield" id="definition"></div>
+            <table class="argument-links">
+              <tr>
+                <td>高可用</td>
+                <td>
+                  <span class="argument-link" field="definition" key="ha-mode" type="string">HA模式</span> <span class="help" id="policy-ha-mode"></span> |
+                  <span class="argument-link" field="definition" key="ha-params" type="number">HA参数</span> <span class="help" id="policy-ha-params"></span> |
+                  <span class="argument-link" field="definition" key="ha-sync-mode" type="string">HA同步模式</span> <span class="help" id="policy-ha-sync-mode"></span> |
+                  <span class="argument-link" field="definition" key="ha-promote-on-shutdown" type="string" value="">HA关机时镜像升级</span> <span class="help" id="policy-ha-promote-on-shutdown"></span>
+                  <span class="argument-link" field="definition" key="ha-promote-on-failure" type="string" value="">HA失败时镜像升级</span> <span class="help" id="policy-ha-promote-on-failure"></span>
+                </td>
+              </tr>
+              <tr>
+                <td>联盟</td>
+                <td>
+                  <span class="argument-link" field="definition" key="federation-upstream-set" type="string">联盟上游集合</span> <span class="help" id="policy-federation-upstream-set"></span> |
+                  <span class="argument-link" field="definition" key="federation-upstream" type="string">联盟上游</span> <span class="help" id="policy-federation-upstream"></span>
+                </td>
+              </tr>
+              <tr>
+                <td>队列</td>
+                <td>
+                  <span class="argument-link" field="definition" key="message-ttl" type="number">消息TTL</span> |
+                  <span class="argument-link" field="definition" key="expires" type="number">自动过期</span> |
+                  <span class="argument-link" field="definition" key="max-length" type="number">最大长度</span> |
+                  <span class="argument-link" field="definition" key="max-length-bytes" type="number">最大长度字节</span> |
+                  <span class="argument-link" field="definition" key="overflow" type="string">溢出行为</span><br/>
+                  <span class="argument-link" field="definition" key="dead-letter-exchange" type="string">死信交换</span> |
+                  <span class="argument-link" field="definition" key="dead-letter-routing-key" type="string">死信路由键</span><br />
+                  <span class="argument-link" field="definition" key="queue-mode" type="string" value="lazy">懒惰模式</span> |
+                  <span class="argument-link" field="definition" key="queue-master-locator" type="string">主定位器</span>
+                </td>
+              </tr>
+              <tr>
+                <td>交换</td>
+                <td>
+                  <span class="argument-link" field="definition" key="alternate-exchange" type="string">交替交换</span>
+                  <span class="help" id="exchange-alternate"></span>
+                </td>
+              </tr>
+            </table>
+          </td>
+          <td class="t"><span class="mand">*</span></td>
+        </tr>
+      </table>
+      <input type="submit" value="添加策略"/>
+    </form>
+  </div>
+</div>
+<% } %>
+
+
+<div class="section">
+  <h2>操作策略</h2>
+  <div class="hider">
+<%= filter_ui(operator_policies) %>
+  <div class="updatable">
+<% if (operator_policies.length > 0) { %>
+<table class="list">
+ <thead>
+  <tr>
+<% if (vhosts_interesting) { %>
+    <th>虚拟机</th>
+<% } %>
+    <th>名称</th>
+    <th>模式</th>
+    <th>应用于</th>
+    <th>定义</th>
+    <th>优先</th>
+    <th class="administrator-only">清除</th>
+  </tr>
+ </thead>
+ <tbody>
+<%
+ for (var i = 0; i < operator_policies.length; i++) {
+    var policy = operator_policies[i];
+%>
+   <tr<%= alt_rows(i)%>>
+<% if (vhosts_interesting) { %>
+     <td><%= fmt_string(policy.vhost) %></td>
+<% } %>
+     <td><%= fmt_string(policy.name) %></td>
+     <td><%= fmt_string(policy.pattern) %></td>
+     <td><%= fmt_string(policy['apply-to']) %></td>
+     <td><%= fmt_table_short(policy.definition) %></td>
+     <td><%= fmt_string(policy.priority) %></td>
+     <td class="administrator-only">
+        <form action="#/operator_policies" method="delete" class="confirm">
+            <input type="hidden" name="name" value="<%= fmt_string(policy.name) %>"/>
+            <input type="hidden" name="vhost" value="<%= fmt_string(policy.vhost) %>"/>
+            <input type="submit" value="清除"/>
+        </form>
+      </td>
+   </tr>
+<% } %>
+ </tbody>
+</table>
+<% } else { %>
+  <p>... 无策略 ...</p>
+<% } %>
+  </div>
+  </div>
+</div>
+
+<% if (user_administrator && vhosts.length > 0) { %>
+
+<div class="section-hidden">
+  <h2>添加/更新操作策略</h2>
+  <div class="hider">
+    <form action="#/operator_policies" method="put">
+      <table class="form">
+<% if (vhosts_interesting) { %>
+        <tr>
+          <th><label>虚拟机:</label></th>
+          <td>
+            <select name="vhost">
+              <% for (var i = 0; i < vhosts.length; i++) { %>
+              <option value="<%= fmt_string(vhosts[i].name) %>"><%= fmt_string(vhosts[i].name) %></option>
+              <% } %>
+            </select>
+          </td>
+        </tr>
+<% } else { %>
+        <tr><td><input type="hidden" name="vhost" value="<%= fmt_string(vhosts[0].name) %>"/></td></tr>
+<% } %>
+        <tr>
+          <th><label>名称:</label></th>
+          <td><input type="text" name="name"/><span class="mand">*</span></td>
+        </tr>
+        <tr>
+          <th><label>模式:</label></th>
+          <td><input type="text" name="pattern"/><span class="mand">*</span></td>
+        </tr>
+        <tr>
+          <th><label>应用到:</label></th>
+          <td>
+            <select name="apply-to">
+              <option value="queues">队列</option>
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <th><label>优先:</label></th>
+          <td><input type="text" name="priority"/></td>
+        </tr>
+        <tr>
+          <th><label>定义:</label></th>
+          <td>
+            <div class="multifield" id="definitionop"></div>
+            <table class="argument-links">
+              <tr>
+                <td>队列</td>
+                <td>
+                  <span class="argument-link" field="definitionop" key="message-ttl" type="number">消息TTL</span> |
+                  <span class="argument-link" field="definitionop" key="expires" type="number">自动过期</span> |
+                  <span class="argument-link" field="definitionop" key="max-length" type="number">最大长度</span> |
+                  <span class="argument-link" field="definitionop" key="max-length-bytes" type="number">最大长度字节数</span> |
+                  <span class="argument-link" field="definitionop" key="overflow" type="string">溢出行为</span><br/>
+                </td>
+              </tr>
+            </table>
+          </td>
+          <td class="t"><span class="mand">*</span></td>
+        </tr>
+      </table>
+      <input type="submit" value="添加策略"/>
+    </form>
+  </div>
+</div>
+<% } %>
+

@@ -1,0 +1,95 @@
+<div class="updatable">
+<%
+   var partitions = [];
+   for (var i = 0; i < nodes.length; i++) {
+     var node = nodes[i];
+     if (node.partitions != undefined && node.partitions.length != 0) {
+       partitions.push({'node': node.name,
+                        'others': node.partitions});
+     }
+   }
+   if (partitions.length > 0) {
+%>
+<p class="status-error">
+  检测到网络分区<br/><br/>
+  Mnesia报告说该RabbitMQ集群经理了一次网络分区。存在丢失数据的风险。请阅读<a href="http://www.rabbitmq.com/partitions.html">RabbitMQ有关网络分区的文档和可能的解决方案</a>.
+</p>
+<p>
+  该分区性质如下:
+</p>
+  <table class="list">
+    <tr>
+      <th>节点</th><th>被分区自</th>
+    </tr>
+
+<%
+   for (var i = 0; i < partitions.length; i++) {
+     var partition = partitions[i];
+%>
+    <tr<%= alt_rows(i)%>>
+      <td><%= fmt_node(partition.node) %></td>
+      <td>
+<%
+   for (var j = 0; j < partition.others.length; j++) {
+     var other = partition.others[j];
+%>
+          <%= other %><br/>
+<% } %>
+      </td>
+    </tr>
+<% } %>
+  </table>
+<p>
+  在此分区状态下运行时, 变更(队列、交换定义和绑定)导致的一个分区内的变化对其它的分区不可见。其他行为不被保证。
+</p>
+<p>
+  <a target="_blank"
+  href="http://www.rabbitmq.com/partitions.html">更多信息关于网络分区.</a>
+</p>
+<% } %>
+<%
+   var ticktime = null;
+   var ticktimes_unequal = false;
+   for (var i = 0; i < nodes.length; i++) {
+     var node_ticktime = nodes[i].net_ticktime;
+     if (node_ticktime != undefined) {
+
+       if (ticktime != null && node_ticktime != ticktime) {
+         ticktimes_unequal = true;
+       }
+       ticktime = nodes[i].net_ticktime;
+     }
+   }
+   if (ticktimes_unequal) {
+%>
+<p class="status-error">
+  关于 <code>kernel</code> <code>net_ticktime</code> 值被设定为不同的节点在此分区.
+</p>
+<p>
+  值为:
+</p>
+  <table class="list">
+    <tr><th>节点</th><th>net_ticktime</th></tr>
+<%
+   for (var i = 0; i < nodes.length; i++) {
+%>
+      <tr<%= alt_rows(i)%>>
+        <td><%= nodes[i].name %></td>
+        <td><%= nodes[i].net_ticktime %></td>
+      </tr>
+<%
+   }
+%>
+  </table>
+<p>
+  危险配置; 如果大量使用错误的值 <code>net_timetime</code> 会导致分区错误的被检测.
+</p>
+<p>
+  <a target="_blank"
+  href="http://www.rabbitmq.com/nettick.html">更多信息
+  <code>net_ticktime</code>.</a>
+</p>
+<%
+   }
+%>
+</div>

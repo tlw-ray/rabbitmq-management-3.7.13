@@ -1,0 +1,30 @@
+<h3>交付</h3>
+<% if (object && object.length > 0) { %>
+<table class="list">
+  <tr>
+<% if (mode == 'queue') { %>
+    <th>通道</th>
+<% } else { %>
+    <th>队列</th>
+<% } %>
+    <th>交付 / 获取</th>
+    <th>ack</th>
+  </tr>
+<%
+   for (var i = 0; i < object.length; i++) {
+     var del = object[i];
+%>
+     <tr<%= alt_rows(i)%>>
+<% if (mode == 'queue') { %>
+       <td><%= link_channel(del.channel_details.name) %></td>
+<% } else { %>
+       <td><%= link_queue(del.queue.vhost, del.queue.name) %></td>
+<% } %>
+       <td class="r"><%= fmt_detail_rate(del.stats, 'deliver_get') %></td>
+       <td class="r"><%= fmt_detail_rate(del.stats, 'ack') %></td>
+     </tr>
+<% } %>
+</table>
+<% } else { %>
+<p> ... 无交付 ...</p>
+<% } %>

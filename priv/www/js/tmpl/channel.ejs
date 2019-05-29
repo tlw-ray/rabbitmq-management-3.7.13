@@ -1,0 +1,137 @@
+<h1>通道: <b><%= fmt_escape_html(channel.name) %></b><%= fmt_maybe_vhost(channel.vhost) %></h1>
+
+<div class="section">
+<h2>概览</h2>
+<div class="hider updatable">
+<% if (rates_mode != 'none') { %>
+    <%= message_rates('msg-rates-ch', channel.message_stats) %>
+<% } %>
+
+<h3>详情</h3>
+<table class="facts facts-l">
+  <tr>
+    <th>连接</th>
+    <td><%= link_conn(channel.connection_details.name) %></td>
+  </tr>
+<% if (nodes_interesting) { %>
+  <tr>
+    <th>节点</th>
+    <td><%= fmt_node(channel.node) %></td>
+  </tr>
+<% } %>
+  <tr>
+    <th>用户名</th>
+    <td><%= fmt_string(channel.user) %></td>
+  </tr>
+  <tr>
+    <th>模式 <span class="help" id="channel-mode"></span></th>
+    <td><%= fmt_channel_mode(channel) %></td>
+  </tr>
+</table>
+
+<table class="facts facts-l">
+  <tr>
+    <th>状态</th>
+    <td><%= fmt_object_state(channel) %></td>
+  </tr>
+  <tr>
+    <th>预取计数</th>
+    <td><%= channel.prefetch_count %></td>
+  </tr>
+  <tr>
+    <th>全局预取计数</th>
+    <td><%= channel.global_prefetch_count %></td>
+  </tr>
+</table>
+
+<table class="facts">
+  <tr>
+    <th>未确认消息</th>
+    <td><%= channel.messages_unacknowledged %></td>
+  </tr>
+  <tr>
+    <th>未证实消息</th>
+    <td><%= channel.messages_unconfirmed %></td>
+  </tr>
+  <tr>
+    <th>未提交消息</th>
+    <td><%= channel.messages_uncommitted %></td>
+  </tr>
+  <tr>
+    <th>未提交ACK</th>
+    <td><%= channel.acks_uncommitted %></td>
+  </tr>
+</table>
+
+</div>
+</div>
+
+<div class="section">
+  <h2>消费者</h2>
+  <div class="hider updatable">
+<%= format('consumers', {'mode': 'channel', 'consumers': channel.consumer_details}) %>
+  </div>
+</div>
+
+<% if (rates_mode == 'detailed') { %>
+<div class="section">
+<h2>消息细分比率</h2>
+<div class="hider updatable">
+<table class="two-col-layout">
+  <tr>
+    <td>
+      <%= format('msg-detail-publishes',
+                 {'mode':   'channel',
+                  'object': channel.publishes,
+                  'label':  'Publishes'}) %>
+    </td>
+    <td>
+      <%= format('msg-detail-deliveries',
+                 {'mode':   'channel',
+                  'object': channel.deliveries}) %>
+    </td>
+  </tr>
+</table>
+</div>
+</div>
+<% } %>
+
+<% if(channel.reductions || channel.garbage_collection) { %>
+<div class="section-hidden">
+<h2>运行时指标 (高级)</h2>
+ <div class="hider updatable">
+ <%= data_reductions('reductions-rates-conn', channel) %>
+ <table class="facts">
+    <% if (channel.garbage_collection.min_bin_vheap_size) { %>
+        <tr>
+        <th>最小二进制虚拟堆大小 (min_bin_vheap_size)</th>
+        <td><%= channel.garbage_collection.min_bin_vheap_size %></td>
+        </tr>
+    <% } %>
+
+    <% if (channel.garbage_collection.min_heap_size) { %>
+        <tr>
+        <th>Minimum heap size in words (min_heap_size)</th>
+        <td><%= channel.garbage_collection.min_heap_size %></td>
+        </tr>
+    <% } %>
+
+    <% if (channel.garbage_collection.fullsweep_after) { %>
+        <tr>
+        <th>全扫描前的最大代数集合 (fullsweep_after)</th>
+        <td><%= channel.garbage_collection.fullsweep_after %></td>
+        </tr>
+    <% } %>
+
+    <% if (channel.garbage_collection.minor_gcs) { %>
+        <tr>
+        <th>Number of minor GCs (minor_gcs)</th>
+        <td><%= channel.garbage_collection.minor_gcs %></td>
+        </tr>
+    <% } %>
+ </table>
+ </div>
+</div>
+
+<% } %>
+

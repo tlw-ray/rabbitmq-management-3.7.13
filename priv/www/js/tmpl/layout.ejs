@@ -1,0 +1,47 @@
+<div id="header">
+  <ul id="topnav">
+    <li id="interval">
+      <label for="update-every" id="status"></label>
+      <select id="update-every">
+        <option value="5000">每5秒刷新</option>
+        <option value="10000">每10秒刷新</option>
+        <option value="30000">每30秒刷新</option>
+        <option value="">无刷新</option>
+      </select>
+    </li>
+    <li id="vhost">
+      <label for="show-vhost">虚拟机 </label>
+      <select id="show-vhost">
+        <option value="">所有</option>
+      </select>
+    </li>
+    <li id="logout">
+      <form action="#/logout" method="put">
+        <input type="submit" value="退出登陆"/>
+      </form>
+    </li>
+  </ul>
+  <div id="logo">
+    <a href="#/"><img src="img/rabbitmqlogo.png" alt="RabbitMQ logo" width="204" height="37"/></a>
+    <span id="versions"></span>
+  </div>
+  <div id="menu">
+    <ul id="tabs">
+    </ul>
+  </div>
+</div>
+<div id="rhs"></div>
+<div id="main"></div>
+<div id="footer">
+  <ul>
+    <li><a href="api/" target="_blank">HTTP API</a></li>
+    <li><a href="https://www.rabbitmq.com/admin-guide.html" target="_blank">服务文档</a></li>
+    <li><a href="https://www.rabbitmq.com/getstarted.html" target="_blank">教程</a></li>
+    <li><a href="https://groups.google.com/forum/#!forum/rabbitmq-users" target="_blank">社区支持</a></li>
+    <li><a href="https://rabbitmq-slack.herokuapp.com/" target="_blank">社区讨论</a></li>
+    <li><a href="http://www.rabbitmq.com/services.html" target="_blank">商业支持</a></li>
+    <li><a href="https://www.rabbitmq.com/plugins.html" target="_blank">插件</a></li>
+    <li><a href="http://www.rabbitmq.com/github.html" target="_blank">GitHub</a></li>
+    <li><a href="https://www.rabbitmq.com/changelog.html" target="_blank">变更日志</a></li>
+  </ul>
+</div>

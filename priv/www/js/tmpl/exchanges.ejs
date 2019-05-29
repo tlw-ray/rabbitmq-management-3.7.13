@@ -1,0 +1,165 @@
+<h1>交换</h1>
+<div class="section">
+   <%= paginate_ui(exchanges, 'exchanges') %>
+</div> 
+<div class="updatable">
+<% if (exchanges.items.length > 0) { %>
+<table class="list">
+ <thead>
+  <tr>
+<% if (vhosts_interesting) { %>
+   <th><%= fmt_sort('虚拟机', 'vhost') %></th>
+<% } %>
+   <th><%= fmt_sort('名称',         'name') %></th>
+<% if (show_column('exchanges', 'type')) { %>
+   <th><%= fmt_sort('类型',         'type') %></th>
+<% } %>
+<% if (show_column('exchanges', 'features')) { %>
+   <th>特征</th>
+<% } %>
+<% if (show_column('exchanges', 'features_no_policy')) { %>
+   <th>特征</th>
+<% } %>
+<% if (show_column('exchanges', 'policy')) { %>
+    <th><%= fmt_sort('策略','policy') %></th>
+<% } %>
+<% if (rates_mode != 'none') { %>
+<% if (show_column('exchanges', 'rate-in')) { %>
+   <th><%= fmt_sort('消息入率',   'message_stats.publish_in_details.rate') %></th>
+<% } %>
+<% if (show_column('exchanges', 'rate-out')) { %>
+   <th><%= fmt_sort('消息出率',  'message_stats.publish_out_details.rate') %></th>
+<% } %>
+<% } %>
+    <th class="plus-minus"><span class="popup-options-link" title="点击改变列" type="columns" for="exchanges">+/-</span></th>
+  </tr>
+ </thead>
+ <tbody>
+<%
+  for (var i = 0; i < exchanges.items.length; i++) {
+    var exchange = exchanges.items[i];
+%>
+  <tr<%= alt_rows(i, exchange.arguments)%>>
+<% if (vhosts_interesting) { %>
+   <td><%= fmt_string(exchange.vhost) %></td>
+<% } %>
+   <td><%= link_exchange(exchange.vhost, exchange.name, exchange.arguments) %></td>
+   <td class="c"><%= fmt_exchange_type(exchange.type) %></td>
+<% if (show_column('exchanges', 'features')) { %>
+   <td class="c">
+     <%= fmt_features_short(exchange) %>
+     <%= fmt_policy_short(exchange) %>
+   </td>
+<% } %>
+<% if (show_column('exchanges', 'features_no_policy')) { %>
+   <td class="c">
+     <%= fmt_features_short(exchange) %>
+   </td>
+<% } %>
+<% if (show_column('exchanges', 'policy')) { %>
+   <td class="c">
+     <%= link_policy(exchange.vhost, exchange.policy) %>
+   </td>
+<% } %>
+<% if (rates_mode != 'none') { %>
+<% if (show_column('exchanges', 'rate-in')) { %>
+   <td class="r"><%= fmt_detail_rate(exchange.message_stats, 'publish_in') %></td>
+<% } %>
+<% if (show_column('exchanges', 'rate-out')) { %>
+   <td class="r"><%= fmt_detail_rate(exchange.message_stats, 'publish_out') %></td>
+<% } %>
+<% } %>
+  </tr>
+  <% } %>
+ </tbody>
+</table>
+<% } else { %>
+  <p>... 无交换 ...</p>
+<% } %>
+  </div>
+  </div>
+</div>
+
+<div class="section-hidden">
+  <h2>添加一个新的交换</h2>
+  <div class="hider">
+    <form action="#/exchanges" method="put">
+      <table class="form">
+<% if (vhosts_interesting) { %>
+        <tr>
+          <th><label>虚拟机:</label></th>
+          <td>
+            <select name="vhost">
+              <% for (var i = 0; i < vhosts.length; i++) { %>
+              <option value="<%= fmt_string(vhosts[i].name) %>" <%= (vhosts[i].name === current_vhost) ? 'selected="selected"' : '' %>><%= fmt_string(vhosts[i].name) %></option>
+              <% } %>
+            </select>
+          </td>
+        </tr>
+<% } else { %>
+        <tr><td><input type="hidden" name="vhost" value="<%= fmt_string(vhosts[0].name) %>"/></td></tr>
+<% } %>
+        <tr>
+          <th><label>名称:</label></th>
+          <td><input type="text" name="name"/><span class="mand">*</span></td>
+        </tr>
+        <tr>
+          <th><label>类型:</label></th>
+          <td>
+            <select name="type">
+              <% for (var i = 0; i < exchange_types.length; i++) {
+                   var type = exchange_types[i];
+                   if (type.internal_purpose == undefined) { %>
+              <option value="<%= fmt_string(type.name) %>"><%= fmt_string(type.name) %></option>
+              <%   }
+                 } %>
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <th><label>耐久力:</label></th>
+          <td>
+            <select name="durable">
+              <option value="true">耐用</option>
+              <option value="false">短暂</option>
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <th><label>自动删除: <span class="help" id="exchange-auto-delete"></span></label></th>
+          <td>
+            <select name="auto_delete">
+              <option value="false">否</option>
+              <option value="true">是</option>
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <th><label>内部: <span class="help" id="exchange-internal"></span></label></th>
+          <td>
+            <select name="internal">
+              <option value="false">否</option>
+              <option value="true">是</option>
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <th><label>参数:</label></th>
+          <td>
+            <div class="multifield" id="arguments"></div>
+            <table class="argument-links">
+              <tr>
+                <td>添加</td>
+                <td>
+                  <span class="argument-link" field="arguments" key="alternate-exchange" type="string">交替交换</span>
+                  <span class="help" id="exchange-alternate"></span>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+      <input type="submit" value="添加交换"/>
+    </form>
+  </div>
+</div>

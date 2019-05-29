@@ -1,0 +1,46 @@
+<h3><%= label %></h3>
+<% if (object && object.length > 0) { %>
+<%
+     var col_confirm = mode != 'exchange-outgoing';
+%>
+<table class="list">
+  <tr>
+<% if (mode == 'channel') { %>
+    <th>交换</th>
+<% } else if (mode == 'exchange-incoming') { %>
+    <th>通道</th>
+<% } else if (mode == 'exchange-outgoing') { %>
+    <th>队列</th>
+<% } else { %>
+    <th>交换</th>
+<% } %>
+    <th>发布</th>
+<% if (col_confirm) { %>
+    <th>确认</th>
+<% } %>
+  </tr>
+<%
+     for (var i = 0; i < object.length; i++) {
+       var pub = object[i];
+%>
+    <tr<%= alt_rows(i)%>>
+
+<% if (mode == 'channel') { %>
+      <td><%= link_exchange(pub.exchange.vhost, pub.exchange.name) %></td>
+<% } else if (mode == 'exchange-incoming') { %>
+      <td><%= link_channel(pub.channel_details.name) %></td>
+<% } else if (mode == 'exchange-outgoing') { %>
+      <td><%= link_queue(pub.queue.vhost, pub.queue.name) %></td>
+<% } else { %>
+      <td><%= link_exchange(pub.exchange.vhost, pub.exchange.name) %></td>
+<% } %>
+      <td class="r"><%= fmt_detail_rate(pub.stats, 'publish') %></td>
+<% if (col_confirm) { %>
+      <td class="r"><%= fmt_detail_rate(pub.stats, 'confirm') %></td>
+<% } %>
+    </tr>
+<% } %>
+</table>
+<% } else { %>
+<p> ... 无发布 ...</p>
+<% } %>

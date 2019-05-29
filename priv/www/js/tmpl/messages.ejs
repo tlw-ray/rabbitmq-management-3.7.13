@@ -1,0 +1,39 @@
+<%
+   for (var i = 0; i < msgs.length; i++) {
+   var msg = msgs[i];
+%>
+<div class="box">
+<h3>消息 <%= i+1 %></h3>
+<p>服务器报告 <b><%= msg.message_count %></b> 留言.</p>
+<table class="facts">
+  <tr>
+    <th>交换</th>
+    <td><%= fmt_exchange(msg.exchange) %></td>
+  </tr>
+  <tr>
+    <th>路由键</th>
+    <td><%= fmt_string(msg.routing_key) %></td>
+  </tr>
+  <tr>
+    <th>交还</th>
+    <td><%= fmt_boolean(msg.redelivered) %></td>
+  </tr>
+  <tr>
+    <th>属性</th>
+    <td><%= fmt_table_short(msg.properties) %></td>
+  </tr>
+  <tr>
+    <th>
+      载荷
+      <sub><%= msg.payload_bytes %> bytes</sub>
+      <sub>编码: <%= msg.payload_encoding %></sub>
+    </th>
+    <td>
+      <pre class="msg-payload"><%= fmt_maybe_wrap(msg.payload, msg.payload_encoding) %></pre>
+    </td>
+  </tr>
+</table>
+</div>
+<%
+  }
+%>

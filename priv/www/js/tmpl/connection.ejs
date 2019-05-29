@@ -1,0 +1,193 @@
+<h1>连接 <%= fmt_string(connection.name) %> <%= fmt_maybe_vhost(connection.vhost) %></h1>
+
+<div class="section">
+<h2>概览</h2>
+<div class="hider updatable">
+  <%= data_rates('data-rates-conn', connection, '数据率') %>
+
+<h3>详情</h3>
+<table class="facts facts-l">
+<% if (nodes_interesting) { %>
+<tr>
+  <th>节点</th>
+  <td><%= fmt_node(connection.node) %></td>
+</tr>
+<% } %>
+
+<% if (connection.client_properties.connection_name) { %>
+<tr>
+  <th>客户端支持名称</th>
+  <td><%= fmt_string(connection.client_properties.connection_name) %></td>
+</tr>
+<% } %>
+
+<tr>
+ <th>用户名</th>
+ <td><%= fmt_string(connection.user) %></td>
+</tr>
+<tr>
+ <th>协议</th>
+ <td><%= connection.protocol %></td>
+</tr>
+<tr>
+  <th>连接于</th>
+  <td><%= fmt_timestamp(connection.connected_at) %></td>
+</tr>
+
+<% if (connection.ssl) { %>
+<tr>
+ <th>SSL</th>
+ <td><%= fmt_boolean(connection.ssl) %></td>
+</tr>
+<% } %>
+
+<% if (connection.auth_mechanism) { %>
+<tr>
+ <th>认证</th>
+ <td><%= connection.auth_mechanism %></td>
+</tr>
+<% } %>
+</table>
+
+<% if (connection.state) { %>
+<table class="facts">
+<tr>
+ <th>状态</th>
+ <td><%= fmt_object_state(connection) %></td>
+</tr>
+<tr>
+ <th>心跳</th>
+ <td><%= fmt_time(connection.timeout, 's') %></td>
+</tr>
+<tr>
+ <th>最大帧数</th>
+ <td><%= connection.frame_max %> bytes</td>
+</tr>
+<tr>
+ <th>通道限制</th>
+ <td><%= connection.channel_max %> channels</td>
+</tr>
+</table>
+
+<% } %>
+
+</div>
+</div>
+
+<div class="section">
+  <h2>通道</h2>
+  <div class="hider updatable">
+    <%= format('channels-list', {'channels': channels, 'mode': 'connection'}) %>
+  </div>
+</div>
+
+<% if (connection.ssl) { %>
+<div class="section">
+<h2>SSL</h2>
+<div class="hider">
+
+<table class="facts">
+  <tr>
+    <th>协议版本</th>
+    <td><%= connection.ssl_protocol %></td>
+  </tr>
+  <tr>
+    <th>键交换算法</th>
+    <td><%= connection.ssl_key_exchange %></td>
+  </tr>
+  <tr>
+    <th>密码算法</th>
+    <td><%= connection.ssl_cipher %></td>
+  </tr>
+  <tr>
+    <th>哈希算法</th>
+    <td><%= connection.ssl_hash %></td>
+  </tr>
+</table>
+
+<% if (connection.peer_cert_issuer != '') { %>
+<table class="facts">
+  <tr>
+    <th>平行证书颁发者</th>
+    <td><%= connection.peer_cert_issuer %></td>
+  </tr>
+  <tr>
+    <th>平行证书主题</th>
+    <td><%= connection.peer_cert_subject %></td>
+  </tr>
+  <tr>
+    <th>平行证书有效期</th>
+    <td><%= connection.peer_cert_validity %></td>
+  </tr>
+</table>
+<% } %>
+</div>
+</div>
+<% } %>
+
+<% if (properties_size(connection.client_properties) > 0) { %>
+<div class="section-hidden">
+<h2>客户端属性</h2>
+<div class="hider">
+<%= fmt_table_long(connection.client_properties) %>
+</div>
+</div>
+<% } %>
+
+<% if(connection.reductions || connection.garbage_collection) { %>
+<div class="section-hidden">
+<h2>运行时指标 (高级)</h2>
+ <div class="hider updatable">
+ <%= data_reductions('reductions-rates-conn', connection) %>
+ <table class="facts">
+    <% if (connection.garbage_collection.min_bin_vheap_size) { %>
+        <tr>
+        <th>最小二进制虚拟堆大小 (min_bin_vheap_size)</th>
+        <td><%= connection.garbage_collection.min_bin_vheap_size %></td>
+        </tr>
+    <% } %>
+
+    <% if (connection.garbage_collection.min_heap_size) { %>
+        <tr>
+        <th>最小堆大小 (min_heap_size)</th>
+        <td><%= connection.garbage_collection.min_heap_size %></td>
+        </tr>
+    <% } %>
+
+    <% if (connection.garbage_collection.fullsweep_after) { %>
+        <tr>
+        <th>全面扫描前的最大代数集合 (fullsweep_after)</th>
+        <td><%= connection.garbage_collection.fullsweep_after %></td>
+        </tr>
+    <% } %>
+
+    <% if (connection.garbage_collection.minor_gcs) { %>
+        <tr>
+        <th>次要GCs数量 (minor_gcs)</th>
+        <td><%= connection.garbage_collection.minor_gcs %></td>
+        </tr>
+    <% } %>
+ </table>
+ </div>
+</div>
+
+<% } %>
+
+
+<div class="section-hidden">
+  <h2>关闭此连接</h2>
+  <div class="hider">
+    <form action="#/connections" method="delete" class="confirm">
+      <input type="hidden" name="name" value="<%= fmt_string(connection.name) %>"/>
+      <table class="form">
+        <tr>
+          <th><label>原因:</label></th>
+          <td>
+            <input type="text" name="reason" value="通过管理插件关闭" class="wide"/>
+          </td>
+        </tr>
+      </table>
+      <input type="submit" value="强制关闭"/>
+    </form>
+  </div>
+</div>

@@ -1,0 +1,366 @@
+<h1>队列 <b><%= fmt_string(queue.name) %></b><%= fmt_maybe_vhost(queue.vhost) %></h1>
+
+<div class="section">
+  <h2>概览</h2>
+  <div class="hider updatable">
+    <%= queue_lengths('lengths-q', queue) %>
+<% if (rates_mode != 'none') { %>
+    <%= message_rates('msg-rates-q', queue.message_stats) %>
+<% } %>
+
+    <h3>详情</h3>
+    <table class="facts facts-l">
+      <tr>
+        <th>特征</th>
+        <td><%= fmt_features(queue) %></td>
+      </tr>
+      <tr>
+        <th>策略</th>
+        <td><%= link_policy(queue.vhost, queue.policy) %></td>
+      </tr>
+      <tr>
+        <th>操作策略</th>
+        <td><%= fmt_string(queue.operator_policy, '') %></td>
+      </tr>
+      <% if (queue.owner_pid_details != undefined) { %>
+        <tr>
+          <th>独家拥有者</th>
+          <td><%= link_conn(queue.owner_pid_details.name) %></td>
+        </tr>
+      <% } %>
+      <tr>
+        <th>有效策略定义</th>
+        <td><%= fmt_table_short(queue.effective_policy_definition) %></td>
+      </tr>
+<% if (nodes_interesting) { %>
+      <tr>
+        <th>节点</th>
+        <td><%= fmt_node(queue.node) %></td>
+      </tr>
+  <% if (!queue.exclusive) { %>
+      <tr>
+        <th>镜像</th>
+        <td>
+          <%
+             var has_unsynced_node = false;
+             for (var i in queue.slave_nodes) {
+               var node = queue.slave_nodes[i];
+          %>
+            <%
+               if (jQuery.inArray(node, queue.synchronised_slave_nodes) == -1) {
+                 has_unsynced_node = true;
+            %>
+             <%= fmt_node(node) %> <b>(unsynchronised)</b>
+            <% } else { %>
+             <%= fmt_node(node) %>
+            <% } %>
+            <br/>
+          <% } %>
+          <% if (queue.state == 'syncing') { %>
+          <table>
+            <tr>
+              <td>
+                <%= fmt_sync_state(queue) %>
+              </td>
+              <td>
+                <form action="#/queues/actions" method="post">
+                  <input type="hidden" name="vhost" value="<%= fmt_string(queue.vhost) %>"/>
+                  <input type="hidden" name="name" value="<%= fmt_string(queue.name) %>"/>
+                  <input type="hidden" name="action" value="cancel_sync"/>
+                  <input type="submit" value="放弃" id="action-button" />
+                </form>
+              </td>
+            </tr>
+          </table>
+          <% } else if (has_unsynced_node) { %>
+          <form action="#/queues/actions" method="post">
+            <input type="hidden" name="vhost" value="<%= fmt_string(queue.vhost) %>"/>
+            <input type="hidden" name="name" value="<%= fmt_string(queue.name) %>"/>
+            <input type="hidden" name="action" value="sync"/>
+            <input type="submit" value="同步" id="action-button" />
+          </form>
+          <% } %>
+        </td>
+      </tr>
+  <% } %>
+<% } %>
+    </table>
+
+    <table class="facts facts-l">
+      <tr>
+        <th>状态</th>
+        <td><%= fmt_object_state(queue) %></td>
+      </tr>
+      <tr>
+        <th>用户</th>
+        <td><%= fmt_string(queue.consumers) %></td>
+      </tr>
+      <tr>
+        <th>消费者利用率 <span class="help" id="queue-consumer-utilisation"></th>
+        <td><%= fmt_percent(queue.consumer_utilisation) %></td>
+      </tr>
+    </table>
+
+    <table class="facts">
+      <tr>
+        <td></td>
+        <th class="horizontal">全部</th>
+        <th class="horizontal">就绪</th>
+        <th class="horizontal">未ACK</th>
+        <th class="horizontal">内存</th>
+        <th class="horizontal">持久化</th>
+        <th class="horizontal">瞬态，分页</th>
+      </tr>
+      <tr>
+        <th>
+          消息
+          <span class="help" id="queue-messages"></span>
+        </th>
+        <td class="r">
+          <%= fmt_num_thousands(queue.messages) %>
+        </td>
+        <td class="r">
+          <%= fmt_num_thousands(queue.messages_ready) %>
+        </td>
+        <td class="r">
+          <%= fmt_num_thousands(queue.messages_unacknowledged) %>
+        </td>
+        <td class="r">
+          <%= fmt_num_thousands(queue.messages_ram) %>
+        </td>
+        <td class="r">
+          <%= fmt_num_thousands(queue.messages_persistent) %>
+        </td>
+        <td class="r">
+          <%= fmt_num_thousands(queue.messages_paged_out) %>
+        </td>
+      </tr>
+      <tr>
+        <th>
+          消息体字节
+          <span class="help" id="queue-message-body-bytes"></span>
+        </th>
+        <td class="r">
+          <%= fmt_bytes(queue.message_bytes) %>
+        </td>
+        <td class="r">
+          <%= fmt_bytes(queue.message_bytes_ready) %>
+        </td>
+        <td class="r">
+          <%= fmt_bytes(queue.message_bytes_unacknowledged) %>
+        </td>
+        <td class="r">
+          <%= fmt_bytes(queue.message_bytes_ram) %>
+        </td>
+        <td class="r">
+          <%= fmt_bytes(queue.message_bytes_persistent) %>
+        </td>
+        <td class="r">
+          <%= fmt_bytes(queue.message_bytes_paged_out) %>
+        </td>
+      </tr>
+      <tr>
+        <th>
+          访问内存
+          <span class="help" id="queue-process-memory"></span>
+        </th>
+        <td class="r"><%= fmt_bytes(queue.memory) %></td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<% if (rates_mode == 'detailed') { %>
+<div class="section-hidden">
+<h2>消息率细分</h2>
+<div class="hider updatable">
+<table class="two-col-layout">
+  <tr>
+    <td>
+      <%= format('msg-detail-publishes',
+                 {'mode':   'queue',
+                  'object': queue.incoming,
+                  'label':  'Incoming'}) %>
+
+    </td>
+    <td>
+      <%= format('msg-detail-deliveries',
+                 {'mode':   'queue',
+                  'object': queue.deliveries}) %>
+    </td>
+  </tr>
+</table>
+</div>
+</div>
+<% } %>
+
+<div class="section-hidden">
+  <h2>消费者</h2>
+  <div class="hider updatable">
+<%= format('consumers', {'mode': 'queue', 'consumers': queue.consumer_details}) %>
+  </div>
+</div>
+
+<div class="section-hidden">
+  <h2>绑定</h2>
+  <div class="hider">
+    <div class="bindings-wrapper">
+      <%= format('bindings', {'mode': 'queue', 'bindings': bindings}) %>
+      <p class="arrow">&dArr;</p>
+      <p><span class="queue">此队列</span></p>
+
+      <%= format('add-binding', {'mode': 'queue', 'parent': queue}) %>
+    </div>
+  </div>
+</div>
+
+<%= format('publish', {'mode': 'queue', 'queue': queue}) %>
+
+<div class="section-hidden">
+  <h2>获得消息</h2>
+  <div class="hider">
+    <p>
+      警告: 从队列中获取消息是一种破坏性行为.
+      <span class="help" id="message-get-requeue"></span>
+    </p>
+    <form action="#/queues/get" method="post">
+      <input type="hidden" name="vhost" value="<%= fmt_string(queue.vhost) %>"/>
+      <input type="hidden" name="name" value="<%= fmt_string(queue.name) %>"/>
+      <input type="hidden" name="truncate" value="50000"/>
+      <table class="form">
+        <tr>
+          <th><label>Ack模式:</label></th>
+          <td>
+            <select name="ackmode">
+                <option value="ack_requeue_true" selected>Nack message requeue true</option>
+                <option value="ack_requeue_false">Ack message requeue false</option>
+                <option value="reject_requeue_true">Reject requeue true</option>
+                <option value="reject_requeue_false">Reject requeue false</option>
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <th><label>编码:</label></th>
+          <td>
+            <select name="encoding">
+              <option value="auto">自动 string / base64</option>
+              <option value="base64">base64</option>
+            </select>
+            <span class="help" id="string-base64"></span>
+          </td>
+        </tr>
+        <tr>
+          <th><label>消息:</label></th>
+          <td><input type="text" name="count" value="1"/></td>
+        </tr>
+      </table>
+      <input type="submit" value="获取消息" />
+    </form>
+    <div id="msg-wrapper"></div>
+  </div>
+</div>
+
+<% if (is_user_policymaker) { %>
+<div class="section-hidden">
+  <h2>移动消息</h2>
+  <div class="hider">
+  <% if (NAVIGATION['Admin'][0]['Shovel Management'] == undefined) { %>
+    <p>要移动消息, 必须启动shovel插件, 请尝试运行如下命令:</p>
+    <pre>$ rabbitmq-plugins enable rabbitmq_shovel rabbitmq_shovel_management</pre>
+  <% } else { %>
+    <p>
+      shovel插件可用于从此队列移动消息到另一个。下面的表格将创建一个临时的shovel将根据默认配置消息移动到同一虚拟机上的另一个队列中。
+    </p>
+    <p>
+      更多操作 <a href="#/dynamic-shovels">查阅shovel接口</a>.
+    </p>
+    <form action="#/shovel-parameters-move-messages" method="put">
+      <input type="hidden" name="component" value="shovel"/>
+      <input type="hidden" name="vhost" value="<%= fmt_string(queue.vhost) %>"/>
+      <input type="hidden" name="name" value="Move from <%= fmt_string(queue.name) %>"/>
+      <input type="hidden" name="src-uri" value="amqp:///<%= esc(queue.vhost) %>"/>
+      <input type="hidden" name="src-queue" value="<%= fmt_string(queue.name) %>"/>
+      <input type="hidden" name="src-protocol" value="amqp091"/>
+      <input type="hidden" name="src-prefetch-count" value="1000"/>
+      <input type="hidden" name="src-delete-after" value="queue-length"/>
+      <input type="hidden" name="dest-protocol" value="amqp091"/>
+      <input type="hidden" name="dest-uri" value="amqp:///<%= esc(queue.vhost) %>"/>
+      <input type="hidden" name="dest-add-forward-headers" value="false"/>
+      <input type="hidden" name="ack-mode" value="on-confirm"/>
+      <input type="hidden" name="redirect" value="#/queues"/>
+
+      <table class="form">
+        <tr>
+          <th>目标队列:</th>
+          <td><input type="text" name="dest-queue"/></td>
+        </tr>
+      </table>
+      <input type="submit" value="移动消息"/>
+    </form>
+  <% } %>
+  </div>
+</div>
+<% } %>
+
+<div class="section-hidden">
+  <h2>删除</h2>
+  <div class="hider">
+    <form action="#/queues" method="delete" class="confirm-queue inline-form">
+      <input type="hidden" name="vhost" value="<%= fmt_string(queue.vhost) %>"/>
+      <input type="hidden" name="name" value="<%= fmt_string(queue.name) %>"/>
+      <input type="hidden" name="mode" value="delete"/>
+      <input type="submit" value="删除队列" />
+    </form>
+  </div>
+</div>
+
+<div class="section-hidden">
+  <h2>清除</h2>
+  <div class="hider">
+    <form action="#/queues" method="delete" class="confirm-purge-queue inline-form">
+      <input type="hidden" name="vhost" value="<%= fmt_string(queue.vhost) %>"/>
+      <input type="hidden" name="name" value="<%= fmt_string(queue.name) %>"/>
+      <input type="hidden" name="mode" value="purge"/>
+      <input type="submit" value="清除消息" />
+    </form>
+  </div>
+</div>
+
+<% if(queue.reductions || queue.garbage_collection) { %>
+<div class="section-hidden">
+<h2>运行时指标(高级)</h2>
+ <div class="hider updatable">
+ <%= data_reductions('reductions-rates-queue', queue) %>
+ <table class="facts">
+    <% if (queue.garbage_collection.min_bin_vheap_size) { %>
+        <tr>
+        <th>最小二进制虚拟堆大小字长 (min_bin_vheap_size)</th>
+        <td><%= queue.garbage_collection.min_bin_vheap_size %></td>
+        </tr>
+    <% } %>
+
+    <% if (queue.garbage_collection.min_heap_size) { %>
+        <tr>
+        <th>最小堆大小字长 (min_heap_size)</th>
+        <td><%= queue.garbage_collection.min_heap_size %></td>
+        </tr>
+    <% } %>
+
+    <% if (queue.garbage_collection.fullsweep_after) { %>
+        <tr>
+        <th>全面扫描前的最大代数集合 (fullsweep_after)</th>
+        <td><%= queue.garbage_collection.fullsweep_after %></td>
+        </tr>
+    <% } %>
+
+    <% if (queue.garbage_collection.minor_gcs) { %>
+        <tr>
+        <th>次要GC数量 (minor_gcs)</th>
+        <td><%= queue.garbage_collection.minor_gcs %></td>
+        </tr>
+    <% } %>
+ </table>
+ </div>
+</div>
+
+<% } %>

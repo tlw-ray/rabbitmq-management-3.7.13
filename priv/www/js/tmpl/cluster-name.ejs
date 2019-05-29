@@ -1,0 +1,26 @@
+<h1>群集名称: <b><%= fmt_string(cluster_name.name) %></b></h1>
+
+<p>
+    客户端可以使用群集名称来标识群集AMQP连接，由shovel和federation插件使用识别消息已路由到哪些群集。
+</p>
+<p>
+请注意，群集名称将通知AMQP中的客户端服务器属性; 即在进行认证之前地点。 因此，它不应被视为私密的。
+</p>
+<p>
+默认情况下，群集名称是从第一个名称生成的集群中的节点，但可以更改。
+</p>
+
+<div class="section-hidden">
+  <h2>改名</h2>
+  <div class="hider">
+    <form action="#/cluster-name" method="put">
+      <table class="form">
+        <tr>
+          <th><label>名称:</label></th>
+          <td><input type="text" name="name" value="<%= fmt_string(cluster_name.name) %>"/><span class="mand">*</span></td>
+        </tr>
+      </table>
+      <input type="submit" value="改名"/>
+    </form>
+  </div>
+</div>
